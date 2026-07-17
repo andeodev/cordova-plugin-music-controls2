@@ -21,6 +21,8 @@ public class MusicControlsInfos{
 	public String nextIcon;
 	public String closeIcon;
 	public String notificationIcon;
+	public double elapsed;
+	public double duration;
 
 	public MusicControlsInfos(JSONArray args) throws JSONException {
 		final JSONObject params = args.getJSONObject(0);
@@ -41,6 +43,8 @@ public class MusicControlsInfos{
 		this.nextIcon = params.getString("nextIcon");
 		this.closeIcon = params.getString("closeIcon");
 		this.notificationIcon = params.getString("notificationIcon");
+		this.elapsed = params.optDouble("elapsed", 0);
+		this.duration = params.optDouble("duration", 0);
 	}
 
 }

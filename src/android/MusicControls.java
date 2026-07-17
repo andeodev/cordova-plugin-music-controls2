@@ -197,6 +197,7 @@ public class MusicControls extends CordovaPlugin {
 					metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_ARTIST, infos.artist);
 					//album
 					metadataBuilder.putString(MediaMetadataCompat.METADATA_KEY_ALBUM, infos.album);
+					metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, secsToMs(infos.duration));
 
 					Bitmap art = getBitmapCover(infos.cover);
 					if(art != null){
@@ -207,10 +208,11 @@ public class MusicControls extends CordovaPlugin {
 
 					mediaSessionCompat.setMetadata(metadataBuilder.build());
 
+					long positionMs = secsToMs(infos.elapsed);
 					if(infos.isPlaying)
-						setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING);
+						setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING, positionMs);
 					else
-						setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED);
+						setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED, positionMs);
 
 					callbackContext.success("success");
 				}
@@ -221,10 +223,11 @@ public class MusicControls extends CordovaPlugin {
 			final boolean isPlaying = params.getBoolean("isPlaying");
 			this.notification.updateIsPlaying(isPlaying);
 
+			final long positionMs = secsToMs(params.optDouble("elapsed", 0));
 			if(isPlaying)
-				setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING);
+				setMediaPlaybackState(PlaybackStateCompat.STATE_PLAYING, positionMs);
 			else
-				setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED);
+				setMediaPlaybackState(PlaybackStateCompat.STATE_PAUSED, positionMs);
 
 			callbackContext.success("success");
 		}
@@ -276,18 +279,26 @@ public class MusicControls extends CordovaPlugin {
 		onDestroy();
 		super.onReset();
 	}
+	private static long secsToMs(double secs) {
+		return (long)(secs * 1000);
+	}
+
 	private void setMediaPlaybackState(int state) {
+		setMediaPlaybackState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN);
+	}
+
+	private void setMediaPlaybackState(int state, long positionMs) {
 		PlaybackStateCompat.Builder playbackstateBuilder = new PlaybackStateCompat.Builder();
 		if( state == PlaybackStateCompat.STATE_PLAYING ) {
 			playbackstateBuilder.setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PAUSE | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS |
 				PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
 				PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH);
-			playbackstateBuilder.setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f);
+			playbackstateBuilder.setState(state, positionMs, 1.0f);
 		} else {
 			playbackstateBuilder.setActions(PlaybackStateCompat.ACTION_PLAY_PAUSE | PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS |
 				PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID |
 				PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH);
-			playbackstateBuilder.setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 0);
+			playbackstateBuilder.setState(state, positionMs, 0);
 		}
 		try {
 		    this.mediaSessionCompat.setPlaybackState(playbackstateBuilder.build());
