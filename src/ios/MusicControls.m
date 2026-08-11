@@ -51,6 +51,11 @@ MusicControlsInfo * musicControlsSettings;
         nowPlayingInfoCenter.nowPlayingInfo = updatedNowPlayingInfo;
     }];
 
+    // Deregister before re-registering to prevent duplicate MPRemoteCommandCenter handlers.
+    // Without this, every create() call stacks another handler set on top of the previous
+    // ones; after minutes of periodic calls those duplicates fire simultaneously on each
+    // lock-screen / Bluetooth button press, crashing or corrupting playback state.
+    [self deregisterMusicControlsEventListener];
     [self registerMusicControlsEventListener];
 }
 
@@ -315,9 +320,11 @@ MusicControlsInfo * musicControlsSettings;
 
 - (void) deregisterMusicControlsEventListener {
     [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"receivedEvent" object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"musicControlsEventNotification" object:nil];
 
     MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+    [commandCenter.playCommand removeTarget:self];
+    [commandCenter.pauseCommand removeTarget:self];
     [commandCenter.nextTrackCommand removeTarget:self];
     [commandCenter.previousTrackCommand removeTarget:self];
 

@@ -56,6 +56,11 @@ public class MusicControls extends CordovaPlugin {
 	private boolean mediaButtonAccess=true;
 	private android.media.session.MediaSession.Token token;
 
+	// Cover-art cache: avoids re-downloading the same image on every create() call
+	// (e.g. the 300 ms Android retry and seek-triggered updates all use the same URL).
+	private String cachedCoverUrl = null;
+	private Bitmap cachedCoverBitmap = null;
+
   	private Activity cordovaActivity;
 
 	private MediaSessionCallback mMediaSessionCallback = new MediaSessionCallback();
@@ -307,16 +312,25 @@ public class MusicControls extends CordovaPlugin {
         }
 	}
 
-	// Get image from url
+	// Get image from url, with a single-entry cache keyed on the URL.
 	private Bitmap getBitmapCover(String coverURL){
+		if (coverURL == null || coverURL.isEmpty()) {
+			cachedCoverUrl = null;
+			cachedCoverBitmap = null;
+			return null;
+		}
+		if (coverURL.equals(cachedCoverUrl) && cachedCoverBitmap != null) {
+			return cachedCoverBitmap;
+		}
 		try{
+			Bitmap bitmap;
 			if(coverURL.matches("^(https?|ftp)://.*$"))
-				// Remote image
-				return getBitmapFromURL(coverURL);
-			else {
-				// Local image
-				return getBitmapFromLocal(coverURL);
-			}
+				bitmap = getBitmapFromURL(coverURL);
+			else
+				bitmap = getBitmapFromLocal(coverURL);
+			cachedCoverUrl = coverURL;
+			cachedCoverBitmap = bitmap;
+			return bitmap;
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			return null;
