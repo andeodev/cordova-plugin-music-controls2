@@ -135,6 +135,7 @@ MusicControlsInfo * musicControlsSettings;
     NSString * seekTo = [NSString stringWithFormat:@"{\"message\":\"music-controls-seek-to\",\"position\":\"%f\"}", event.positionTime];
     CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:seekTo];
     pluginResult.associatedObject = @{@"position":[NSNumber numberWithDouble: event.positionTime]};
+    [pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:[self latestEventCallbackId]];
     return MPRemoteCommandHandlerStatusSuccess;
 }
@@ -144,6 +145,7 @@ MusicControlsInfo * musicControlsSettings;
     NSString * action = @"music-controls-skip-forward";
     NSString * jsonAction = [NSString stringWithFormat:@"{\"message\":\"%@\"}", action];
     CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonAction];
+    [pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:[self latestEventCallbackId]];
     return MPRemoteCommandHandlerStatusSuccess;
 }
@@ -153,6 +155,7 @@ MusicControlsInfo * musicControlsSettings;
     NSString * action = @"music-controls-skip-backward";
     NSString * jsonAction = [NSString stringWithFormat:@"{\"message\":\"%@\"}", action];
     CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonAction];
+    [pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:[self latestEventCallbackId]];
     return MPRemoteCommandHandlerStatusSuccess;
 }
@@ -169,6 +172,7 @@ MusicControlsInfo * musicControlsSettings;
     NSString * action = @"music-controls-next";
     NSString * jsonAction = [NSString stringWithFormat:@"{\"message\":\"%@\"}", action];
     CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonAction];
+    [pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:[self latestEventCallbackId]];
     return MPRemoteCommandHandlerStatusSuccess;
 }
@@ -177,6 +181,7 @@ MusicControlsInfo * musicControlsSettings;
     NSString * action = @"music-controls-previous";
     NSString * jsonAction = [NSString stringWithFormat:@"{\"message\":\"%@\"}", action];
     CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonAction];
+    [pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:[self latestEventCallbackId]];
     return MPRemoteCommandHandlerStatusSuccess;
 
@@ -186,6 +191,7 @@ MusicControlsInfo * musicControlsSettings;
     NSString * action = @"music-controls-pause";
     NSString * jsonAction = [NSString stringWithFormat:@"{\"message\":\"%@\"}", action];
     CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonAction];
+    [pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:[self latestEventCallbackId]];
     return MPRemoteCommandHandlerStatusSuccess;
 
@@ -195,6 +201,7 @@ MusicControlsInfo * musicControlsSettings;
     NSString * action = @"music-controls-play";
     NSString * jsonAction = [NSString stringWithFormat:@"{\"message\":\"%@\"}", action];
     CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonAction];
+    [pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:[self latestEventCallbackId]];
     return MPRemoteCommandHandlerStatusSuccess;
 
@@ -247,6 +254,7 @@ MusicControlsInfo * musicControlsSettings;
 
         NSString * jsonAction = [NSString stringWithFormat:@"{\"message\":\"%@\"}", action];
         CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonAction];
+        [pluginResult setKeepCallbackAsBool:YES];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:[self latestEventCallbackId]];
     }
 }
