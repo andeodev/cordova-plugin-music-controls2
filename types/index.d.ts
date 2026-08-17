@@ -17,7 +17,7 @@ declare namespace MediaControls {
         hasSkipBackward?: boolean;
         skipForwardInterval?: number;
         skipBackwardInterval?: number;
-        hasScrubbing?: false;
+        hasScrubbing?: boolean;
 
         // Android only
         ticker?: string;
