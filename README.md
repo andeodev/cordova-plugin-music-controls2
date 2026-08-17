@@ -13,7 +13,7 @@ updates to npm to make life easier for everyone.
 ## Supported platforms
 - Android (4.1+) ([homerours](https://github.com/homerours))
 - Windows (10+, by [filfat](https://github.com/filfat))
-- iOS 8+ (by [0505gonzalez](https://github.com/0505gonzalez))
+- iOS 15+
 
 ## Installation
 - Current release
@@ -87,6 +87,9 @@ function events(action) {
 			// Do something
 			break;
 		case 'music-controls-destroy':
+			// Do something
+			break;
+		case 'music-controls-stop-listening':
 			// Do something
 			break;
     	case 'music-controls-toggle-play-pause' :
@@ -193,10 +196,18 @@ MusicControls.checkBatteryOptimizations(function (status) {
 'music-controls-media-button-headset-hook'
 ```
 
-- iOS Only:
+- iOS only:
 ```javascript
-'music-controls-skip-forward', 'music-controls-skip-backward'
+'music-controls-skip-forward', 'music-controls-skip-backward', 'music-controls-stop-listening'
 ```
+
+## Compatibility notes
+
+### cordova-ios 8.1.1+
+
+cordova-ios 8.1.1 changed the `WKScriptMessageHandler` from `CDVViewController` to `CDVWebViewEngine` (fix [#1664](https://github.com/apache/cordova-ios/pull/1664)). This altered the JS→native dispatch path and exposed a race condition in the plugin's previous one-shot callback re-registration pattern: after each lock screen button press, the callbackId was invalidated on the JS side, requiring a `cordova.exec('watch')` round-trip before the next press. Under the new dispatch path this round-trip could arrive too late when the app was backgrounded, causing all subsequent button presses to silently no-op.
+
+Fixed by setting `keepCallback = YES` on all `MPRemoteCommandCenter` and `UIEvent` handlers so the callbackId stays permanently valid and no re-registration is needed after each event.
 
 ## Contributing
 

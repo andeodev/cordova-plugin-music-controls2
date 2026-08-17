@@ -90,13 +90,6 @@ var musicControls = {
   },
   receiveCallbackFromNative: function(messageFromNative) {
     musicControls.updateCallback(messageFromNative);
-    cordova.exec(
-      musicControls.receiveCallbackFromNative,
-      function(res) {},
-      "MusicControls",
-      "watch",
-      []
-    );
   },
 
   disableBatteryOptimizations: function() {
