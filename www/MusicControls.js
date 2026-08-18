@@ -90,6 +90,11 @@ var musicControls = {
   },
   receiveCallbackFromNative: function(messageFromNative) {
     musicControls.updateCallback(messageFromNative);
+    // Re-arm the native watch for the next button press.
+    // The Java callbacks (MediaSessionCallback, BroadcastReceiver) null themselves after
+    // each event and callbackContext.success() sends keepCallback=false, so the Cordova
+    // bridge removes the JS handler after it fires. Re-calling listen() here restores it.
+    musicControls.listen();
   },
 
   disableBatteryOptimizations: function() {
@@ -121,6 +126,27 @@ var musicControls = {
         []
     );
   },
+
+  storePlaybackState: function(data, successCallback, errorCallback) {
+    cordova.exec(
+        successCallback,
+        errorCallback,
+        "MusicControls",
+        "storePlaybackState",
+        [data]
+    );
+  },
+
+  getRecoveryData: function(successCallback, errorCallback) {
+    cordova.exec(
+        successCallback,
+        errorCallback,
+        "MusicControls",
+        "getRecoveryData",
+        []
+    );
+  },
+
 };
 
 function isUndefined(val) {
