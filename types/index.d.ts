@@ -142,4 +142,11 @@ declare var MusicControls: {
      * Check if battery optimizations are enabled.
      */
     checkBatteryOptimizations(callback: (status: MediaControls.BatteryOptimizationStatus) => void): void;
+
+    /** Store current playback state in native memory for WebView crash recovery. Android only. */
+    storePlaybackState(data: object, onSuccess: () => void, onError: () => void): void;
+
+    /** Retrieve stored crash-recovery data. Returns null JSON string if no crash occurred. Android only. */
+    getRecoveryData(onSuccess: (data: string) => void, onError: () => void): void;
+
 };

@@ -38,6 +38,8 @@ import android.content.BroadcastReceiver;
 import android.media.AudioManager;
 import android.provider.Settings;
 import android.view.View;
+import android.webkit.RenderProcessGoneDetail;
+import android.webkit.WebView;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -60,6 +62,10 @@ public class MusicControls extends CordovaPlugin {
 	// (e.g. the 300 ms Android retry and seek-triggered updates all use the same URL).
 	private String cachedCoverUrl = null;
 	private Bitmap cachedCoverBitmap = null;
+
+	// WebView crash recovery: survives renderer death because this plugin runs in the main app process.
+	private long webviewKilledAt = 0;
+	private String storedPlaybackState = null;
 
   	private Activity cordovaActivity;
 
@@ -268,6 +274,38 @@ public class MusicControls extends CordovaPlugin {
 			else
 				callbackContext.success("disabled");
 		}
+		else if (action.equals("storePlaybackState")) {
+			try {
+				JSONObject payload = args.getJSONObject(0);
+				this.storedPlaybackState = payload.toString();
+				callbackContext.success("ok");
+			} catch (JSONException e) {
+				callbackContext.error("Invalid payload");
+			}
+		}
+		else if (action.equals("getRecoveryData")) {
+			if (this.webviewKilledAt == 0 || this.storedPlaybackState == null) {
+				callbackContext.success("null");
+				return true;
+			}
+			try {
+				JSONObject result = new JSONObject(this.storedPlaybackState);
+				result.put("killedAt", this.webviewKilledAt);
+				this.webviewKilledAt = 0;
+				callbackContext.success(result.toString());
+			} catch (JSONException e) {
+				this.webviewKilledAt = 0;
+				callbackContext.success("null");
+			}
+		}
+		return true;
+	}
+
+	@Override
+	public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+		this.webviewKilledAt = System.currentTimeMillis();
+		LOG.w("MusicControls", "WebView renderer gone (crashed=" + detail.didCrash() + "), reloading");
+		cordova.getActivity().runOnUiThread(() -> view.reload());
 		return true;
 	}
 

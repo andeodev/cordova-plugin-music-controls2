@@ -1,6 +1,6 @@
 {
   "name": "@andeo/cordova-plugin-music-controls2",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Music controls for Cordova apps",
   "cordova": {
     "id": "@andeo/cordova-plugin-music-controls2",
