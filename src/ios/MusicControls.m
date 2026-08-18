@@ -85,6 +85,7 @@ MusicControlsInfo * musicControlsSettings;
 
 - (void) destroy: (CDVInvokedUrlCommand *) command {
     [self deregisterMusicControlsEventListener];
+    [self setLatestEventCallbackId:nil];
 }
 
 - (void) watch: (CDVInvokedUrlCommand *) command {
@@ -342,8 +343,6 @@ MusicControlsInfo * musicControlsSettings;
         [commandCenter.skipForwardCommand removeTarget:self];
         [commandCenter.skipBackwardCommand removeTarget:self];
     }
-
-    [self setLatestEventCallbackId:nil];
 }
 
 - (void) dealloc {
