@@ -1,3 +1,13 @@
+function safeExec(successCallback, errorCallback, service, action, args) {
+    try {
+        cordova.exec(successCallback, errorCallback, service, action, args);
+    } catch (err) {
+        if (typeof errorCallback === 'function') {
+            errorCallback(err);
+        }
+    }
+}
+
 var musicControls = {
   updateCallback: function() {},
 
@@ -26,13 +36,13 @@ var musicControls = {
     data.closeIcon = !isUndefined(data.closeIcon) ? data.closeIcon : "";
     data.notificationIcon = !isUndefined(data.notificationIcon) ? data.notificationIcon : "";
 
-    cordova.exec(successCallback, errorCallback, "MusicControls", "create", [
+    safeExec(successCallback, errorCallback, "MusicControls", "create", [
       data
     ]);
   },
 
   updateIsPlaying: function(isPlaying, successCallback, errorCallback) {
-    cordova.exec(
+    safeExec(
       successCallback,
       errorCallback,
       "MusicControls",
@@ -41,7 +51,7 @@ var musicControls = {
     );
   },
   updateElapsed: function(args, successCallback, errorCallback) {
-    cordova.exec(
+    safeExec(
       successCallback,
       errorCallback,
       "MusicControls",
@@ -55,7 +65,7 @@ var musicControls = {
     );
   },
   updateDismissable: function(dismissable, successCallback, errorCallback) {
-    cordova.exec(
+    safeExec(
       successCallback,
       errorCallback,
       "MusicControls",
@@ -65,7 +75,7 @@ var musicControls = {
   },
 
   destroy: function(successCallback, errorCallback) {
-    cordova.exec(
+    safeExec(
       successCallback,
       errorCallback,
       "MusicControls",
@@ -80,7 +90,7 @@ var musicControls = {
   },
   // Start listening for events
   listen: function() {
-    cordova.exec(
+    safeExec(
       musicControls.receiveCallbackFromNative,
       function(res) {},
       "MusicControls",
@@ -98,7 +108,7 @@ var musicControls = {
   },
 
   disableBatteryOptimizations: function() {
-    cordova.exec(
+    safeExec(
         null,
         null,
         "MusicControls",
@@ -108,7 +118,7 @@ var musicControls = {
   },
 
   openBatteryOptimizationSettings: function() {
-    cordova.exec(
+    safeExec(
         null,
         null,
         "MusicControls",
@@ -118,7 +128,7 @@ var musicControls = {
   },
 
   checkBatteryOptimizations: function(successCallback, errorCallback) {
-    cordova.exec(
+    safeExec(
         successCallback,
         errorCallback,
         "MusicControls",
@@ -128,7 +138,7 @@ var musicControls = {
   },
 
   storePlaybackState: function(data, successCallback, errorCallback) {
-    cordova.exec(
+    safeExec(
         successCallback,
         errorCallback,
         "MusicControls",
@@ -138,7 +148,7 @@ var musicControls = {
   },
 
   getRecoveryData: function(successCallback, errorCallback) {
-    cordova.exec(
+    safeExec(
         successCallback,
         errorCallback,
         "MusicControls",
