@@ -26,6 +26,7 @@
 - (MPRemoteCommandHandlerStatus) remoteEvent:(MPRemoteCommandEvent *) event;
 - (MPRemoteCommandHandlerStatus) playEvent:(MPRemoteCommandEvent *) event;
 - (MPRemoteCommandHandlerStatus) pauseEvent:(MPRemoteCommandEvent *) event;
+- (MPRemoteCommandHandlerStatus) togglePlayPauseEvent:(MPRemoteCommandEvent *) event;
 - (MPRemoteCommandHandlerStatus) nextTrackEvent:(MPRemoteCommandEvent *) event;
 - (MPRemoteCommandHandlerStatus) prevTrackEvent:(MPRemoteCommandEvent *) event;
 - (void) skipForwardEvent: (MPSkipIntervalCommandEvent *) event;

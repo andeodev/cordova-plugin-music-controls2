@@ -14,7 +14,19 @@
 //save the passed in info globally so we can configure the enabled/disabled commands and skip intervals
 MusicControlsInfo * musicControlsSettings;
 
+@interface MusicControls ()
+// iOS 16+: session-scoped Now Playing ownership; nil on iOS 15 (uses shared singletons).
+@property (nonatomic, strong) MPNowPlayingSession *nowPlayingSession API_AVAILABLE(ios(16.0));
+@end
+
 @implementation MusicControls
+
+// Lazily creates the MPNowPlayingSession. Must be called on the main thread.
+- (void) ensureNowPlayingSession API_AVAILABLE(ios(16.0)) {
+    if (self.nowPlayingSession == nil) {
+        self.nowPlayingSession = [[MPNowPlayingSession alloc] initWithPlayers:@[]];
+    }
+}
 
 - (void) create: (CDVInvokedUrlCommand *) command {
     NSDictionary * musicControlsInfoDict = [command.arguments objectAtIndex:0];
@@ -25,8 +37,18 @@ MusicControlsInfo * musicControlsSettings;
         return;
     }
 
+    // Session must be created on the main thread before the background block captures it.
+    if (@available(iOS 16, *)) {
+        [self ensureNowPlayingSession];
+    }
+
     [self.commandDelegate runInBackground:^{
-        MPNowPlayingInfoCenter * nowPlayingInfoCenter =  [MPNowPlayingInfoCenter defaultCenter];
+        MPNowPlayingInfoCenter *nowPlayingInfoCenter;
+        if (@available(iOS 16, *)) {
+            nowPlayingInfoCenter = self.nowPlayingSession.nowPlayingInfoCenter;
+        } else {
+            nowPlayingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
+        }
         NSDictionary * nowPlayingInfo = nowPlayingInfoCenter.nowPlayingInfo;
         NSMutableDictionary * updatedNowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:nowPlayingInfo];
 
@@ -49,6 +71,13 @@ MusicControlsInfo * musicControlsSettings;
         [updatedNowPlayingInfo setObject:playbackRate forKey:MPNowPlayingInfoPropertyPlaybackRate];
 
         nowPlayingInfoCenter.nowPlayingInfo = updatedNowPlayingInfo;
+
+        // Explicitly claim Now Playing ownership on every update, including when paused.
+        // This prevents iOS from re-routing Bluetooth/lock-screen controls to another app
+        // after a period of silence.
+        if (@available(iOS 16, *)) {
+            [self.nowPlayingSession becomeActiveIfPossible];
+        }
     }];
 
     // Deregister before re-registering to prevent duplicate MPRemoteCommandCenter handlers.
@@ -69,7 +98,14 @@ MusicControlsInfo * musicControlsSettings;
         return;
     }
 
-    MPNowPlayingInfoCenter * nowPlayingCenter = [MPNowPlayingInfoCenter defaultCenter];
+    MPNowPlayingInfoCenter *nowPlayingCenter;
+    if (@available(iOS 16, *)) {
+        [self ensureNowPlayingSession];
+        nowPlayingCenter = self.nowPlayingSession.nowPlayingInfoCenter;
+        [self.nowPlayingSession becomeActiveIfPossible];
+    } else {
+        nowPlayingCenter = [MPNowPlayingInfoCenter defaultCenter];
+    }
     NSMutableDictionary * updatedNowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:nowPlayingCenter.nowPlayingInfo];
 
     [updatedNowPlayingInfo setObject:elapsed forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
@@ -84,7 +120,11 @@ MusicControlsInfo * musicControlsSettings;
 }
 
 - (void) destroy: (CDVInvokedUrlCommand *) command {
+    [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
     [self deregisterMusicControlsEventListener];
+    if (@available(iOS 16, *)) {
+        self.nowPlayingSession = nil;
+    }
     [self setLatestEventCallbackId:nil];
 }
 
@@ -124,7 +164,10 @@ MusicControlsInfo * musicControlsSettings;
         coverImage = [UIImage imageNamed:@"none"];
     }
 
-    return [self isCoverImageValid:coverImage] ? [[MPMediaItemArtwork alloc] initWithImage:coverImage] : nil;
+    if (![self isCoverImageValid:coverImage]) return nil;
+    return [[MPMediaItemArtwork alloc] initWithBoundsSize:coverImage.size requestHandler:^UIImage * _Nonnull(CGSize size) {
+        return coverImage;
+    }];
 }
 
 - (bool) isCoverImageValid: (UIImage *) coverImage {
@@ -208,6 +251,15 @@ MusicControlsInfo * musicControlsSettings;
 
 }
 
+- (MPRemoteCommandHandlerStatus) togglePlayPauseEvent:(MPRemoteCommandEvent *)event {
+    NSString * action = @"music-controls-toggle-play-pause";
+    NSString * jsonAction = [NSString stringWithFormat:@"{\"message\":\"%@\"}", action];
+    CDVPluginResult * pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:jsonAction];
+    [pluginResult setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:[self latestEventCallbackId]];
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
 //Handle all other remote control events
 - (void) handleMusicControlsNotification: (NSNotification *) notification {
     UIEvent * receivedEvent = notification.object;
@@ -277,15 +329,27 @@ MusicControlsInfo * musicControlsSettings;
 //There are only 3 button slots available so next/prev track and skip forward/back cannot both be enabled
 //skip forward/back will take precedence if both are enabled
 - (void) registerMusicControlsEventListener {
-    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleMusicControlsNotification:) name:@"musicControlsEventNotification" object:nil];
+    // MPRemoteCommandCenter is the sole event pathway on modern iOS (13+).
+    // beginReceivingRemoteControlEvents is managed by viewDidAppear/viewWillDisappear
+    // and destroy — calling it here caused the end/begin cycle on every create() call
+    // to redeliver a buffered UIEvent mid-navigation, producing a double-skip.
+
+    MPRemoteCommandCenter *commandCenter;
+    if (@available(iOS 16, *)) {
+        // Session is guaranteed non-nil here: create: calls ensureNowPlayingSession before
+        // calling deregister/register, and dealloc returns early if session is nil.
+        commandCenter = self.nowPlayingSession.remoteCommandCenter;
+    } else {
+        commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+    }
 
     //register required event handlers for standard controls
-    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
     [commandCenter.playCommand setEnabled:true];
     [commandCenter.playCommand addTarget:self action:@selector(playEvent:)];
     [commandCenter.pauseCommand setEnabled:true];
     [commandCenter.pauseCommand addTarget:self action:@selector(pauseEvent:)];
+    [commandCenter.togglePlayPauseCommand setEnabled:true];
+    [commandCenter.togglePlayPauseCommand addTarget:self action:@selector(togglePlayPauseEvent:)];
     if(musicControlsSettings.hasNext){
         [commandCenter.nextTrackCommand setEnabled:true];
         [commandCenter.nextTrackCommand addTarget:self action:@selector(nextTrackEvent:)];
@@ -328,12 +392,18 @@ MusicControlsInfo * musicControlsSettings;
 }
 
 - (void) deregisterMusicControlsEventListener {
-    [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:@"musicControlsEventNotification" object:nil];
+    MPRemoteCommandCenter *commandCenter;
+    if (@available(iOS 16, *)) {
+        // Session is nil before the first create() call or after destroy() — nothing to deregister.
+        if (self.nowPlayingSession == nil) return;
+        commandCenter = self.nowPlayingSession.remoteCommandCenter;
+    } else {
+        commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+    }
 
-    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
     [commandCenter.playCommand removeTarget:self];
     [commandCenter.pauseCommand removeTarget:self];
+    [commandCenter.togglePlayPauseCommand removeTarget:self];
     [commandCenter.nextTrackCommand removeTarget:self];
     [commandCenter.previousTrackCommand removeTarget:self];
 
