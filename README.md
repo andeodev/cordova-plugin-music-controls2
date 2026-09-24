@@ -198,7 +198,13 @@ MusicControls.checkBatteryOptimizations(function (status) {
 
 - iOS only:
 ```javascript
-'music-controls-skip-forward', 'music-controls-skip-backward', 'music-controls-stop-listening'
+'music-controls-skip-forward', 'music-controls-skip-backward', 'music-controls-stop-listening',
+'music-controls-seek-to'
+```
+
+- iOS - fired by AirPods / wired headset center-button:
+```javascript
+'music-controls-toggle-play-pause'
 ```
 
 ## Compatibility notes
@@ -208,6 +214,16 @@ MusicControls.checkBatteryOptimizations(function (status) {
 cordova-ios 8.1.1 changed the `WKScriptMessageHandler` from `CDVViewController` to `CDVWebViewEngine` (fix [#1664](https://github.com/apache/cordova-ios/pull/1664)). This altered the JS→native dispatch path and exposed a race condition in the plugin's previous one-shot callback re-registration pattern: after each lock screen button press, the callbackId was invalidated on the JS side, requiring a `cordova.exec('watch')` round-trip before the next press. Under the new dispatch path this round-trip could arrive too late when the app was backgrounded, causing all subsequent button presses to silently no-op.
 
 Fixed by setting `keepCallback = YES` on all `MPRemoteCommandCenter` and `UIEvent` handlers so the callbackId stays permanently valid and no re-registration is needed after each event.
+
+### iOS 17+ - double-skip on next/previous (streaming)
+
+On iOS 17+, calling `MusicControls.create()` repeatedly (e.g. on every track change) previously cycled `beginReceivingRemoteControlEvents` / `endReceivingRemoteControlEvents` on each call. This caused a buffered UIEvent from the lock screen or a Bluetooth device to be redelivered after app state had already advanced, making next/previous skip two tracks instead of one for streaming audio. Offline playback was unaffected.
+
+Fixed in 1.0.15: the `begin/endReceivingRemoteControlEvents` cycle is no longer called inside `create()`. Remote control events are handled exclusively through `MPRemoteCommandCenter`, which does not require this cycle.
+
+### iOS 16+ - MPNowPlayingSession
+
+On iOS 16+, the plugin now uses `MPNowPlayingSession` instead of the shared `MPNowPlayingInfoCenter` and `MPRemoteCommandCenter` singletons. `becomeActiveIfPossible` is called on every `create()` and `updateIsPlaying()` to explicitly re-assert Now Playing ownership, including while paused. iOS 15 falls back to the original singleton behaviour.
 
 ## Contributing
 
