@@ -14,19 +14,7 @@
 //save the passed in info globally so we can configure the enabled/disabled commands and skip intervals
 MusicControlsInfo * musicControlsSettings;
 
-@interface MusicControls ()
-// iOS 16+: session-scoped Now Playing ownership; nil on iOS 15 (uses shared singletons).
-@property (nonatomic, strong) MPNowPlayingSession *nowPlayingSession API_AVAILABLE(ios(16.0));
-@end
-
 @implementation MusicControls
-
-// Lazily creates the MPNowPlayingSession. Must be called on the main thread.
-- (void) ensureNowPlayingSession API_AVAILABLE(ios(16.0)) {
-    if (self.nowPlayingSession == nil) {
-        self.nowPlayingSession = [[MPNowPlayingSession alloc] initWithPlayers:@[]];
-    }
-}
 
 - (void) create: (CDVInvokedUrlCommand *) command {
     NSDictionary * musicControlsInfoDict = [command.arguments objectAtIndex:0];
@@ -37,18 +25,8 @@ MusicControlsInfo * musicControlsSettings;
         return;
     }
 
-    // Session must be created on the main thread before the background block captures it.
-    if (@available(iOS 16, *)) {
-        [self ensureNowPlayingSession];
-    }
-
     [self.commandDelegate runInBackground:^{
-        MPNowPlayingInfoCenter *nowPlayingInfoCenter;
-        if (@available(iOS 16, *)) {
-            nowPlayingInfoCenter = self.nowPlayingSession.nowPlayingInfoCenter;
-        } else {
-            nowPlayingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
-        }
+        MPNowPlayingInfoCenter *nowPlayingInfoCenter = [MPNowPlayingInfoCenter defaultCenter];
         NSDictionary * nowPlayingInfo = nowPlayingInfoCenter.nowPlayingInfo;
         NSMutableDictionary * updatedNowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:nowPlayingInfo];
 
@@ -91,13 +69,7 @@ MusicControlsInfo * musicControlsSettings;
         return;
     }
 
-    MPNowPlayingInfoCenter *nowPlayingCenter;
-    if (@available(iOS 16, *)) {
-        [self ensureNowPlayingSession];
-        nowPlayingCenter = self.nowPlayingSession.nowPlayingInfoCenter;
-    } else {
-        nowPlayingCenter = [MPNowPlayingInfoCenter defaultCenter];
-    }
+    MPNowPlayingInfoCenter *nowPlayingCenter = [MPNowPlayingInfoCenter defaultCenter];
     NSMutableDictionary * updatedNowPlayingInfo = [NSMutableDictionary dictionaryWithDictionary:nowPlayingCenter.nowPlayingInfo];
 
     [updatedNowPlayingInfo setObject:elapsed forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
@@ -114,9 +86,6 @@ MusicControlsInfo * musicControlsSettings;
 - (void) destroy: (CDVInvokedUrlCommand *) command {
     [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
     [self deregisterMusicControlsEventListener];
-    if (@available(iOS 16, *)) {
-        self.nowPlayingSession = nil;
-    }
     [self setLatestEventCallbackId:nil];
 }
 
@@ -326,14 +295,7 @@ MusicControlsInfo * musicControlsSettings;
     // and destroy — calling it here caused the end/begin cycle on every create() call
     // to redeliver a buffered UIEvent mid-navigation, producing a double-skip.
 
-    MPRemoteCommandCenter *commandCenter;
-    if (@available(iOS 16, *)) {
-        // Session is guaranteed non-nil here: create: calls ensureNowPlayingSession before
-        // calling deregister/register, and dealloc returns early if session is nil.
-        commandCenter = self.nowPlayingSession.remoteCommandCenter;
-    } else {
-        commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
-    }
+    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
 
     //register required event handlers for standard controls
     [commandCenter.playCommand setEnabled:true];
@@ -384,14 +346,7 @@ MusicControlsInfo * musicControlsSettings;
 }
 
 - (void) deregisterMusicControlsEventListener {
-    MPRemoteCommandCenter *commandCenter;
-    if (@available(iOS 16, *)) {
-        // Session is nil before the first create() call or after destroy() — nothing to deregister.
-        if (self.nowPlayingSession == nil) return;
-        commandCenter = self.nowPlayingSession.remoteCommandCenter;
-    } else {
-        commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
-    }
+    MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
 
     [commandCenter.playCommand removeTarget:self];
     [commandCenter.pauseCommand removeTarget:self];

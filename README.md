@@ -221,9 +221,6 @@ On iOS 17+, calling `MusicControls.create()` repeatedly (e.g. on every track cha
 
 Fixed in 1.0.15: the `begin/endReceivingRemoteControlEvents` cycle is no longer called inside `create()`. Remote control events are handled exclusively through `MPRemoteCommandCenter`, which does not require this cycle.
 
-### iOS 16+ - MPNowPlayingSession
-
-On iOS 16+, the plugin now uses `MPNowPlayingSession` instead of the shared `MPNowPlayingInfoCenter` and `MPRemoteCommandCenter` singletons. `becomeActiveIfPossible` is called on every `create()` and `updateIsPlaying()` to explicitly re-assert Now Playing ownership, including while paused. iOS 15 falls back to the original singleton behaviour.
 
 ## Contributing
 
