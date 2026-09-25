@@ -71,13 +71,6 @@ MusicControlsInfo * musicControlsSettings;
         [updatedNowPlayingInfo setObject:playbackRate forKey:MPNowPlayingInfoPropertyPlaybackRate];
 
         nowPlayingInfoCenter.nowPlayingInfo = updatedNowPlayingInfo;
-
-        // Explicitly claim Now Playing ownership on every update, including when paused.
-        // This prevents iOS from re-routing Bluetooth/lock-screen controls to another app
-        // after a period of silence.
-        if (@available(iOS 16, *)) {
-            [self.nowPlayingSession becomeActiveIfPossible];
-        }
     }];
 
     // Deregister before re-registering to prevent duplicate MPRemoteCommandCenter handlers.
@@ -102,7 +95,6 @@ MusicControlsInfo * musicControlsSettings;
     if (@available(iOS 16, *)) {
         [self ensureNowPlayingSession];
         nowPlayingCenter = self.nowPlayingSession.nowPlayingInfoCenter;
-        [self.nowPlayingSession becomeActiveIfPossible];
     } else {
         nowPlayingCenter = [MPNowPlayingInfoCenter defaultCenter];
     }
